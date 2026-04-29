@@ -25,7 +25,7 @@ if ($resultadoExistenteId) {
     exit;
 }
 
-$gameConfig = game_config_load();
+$gameConfig = game_config_load(); // Ya no necesita argumentos
 $preguntaJuego = (string) $gameConfig['pregunta'];
 $imagenJuego = (string) $gameConfig['imagen'];
 

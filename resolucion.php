@@ -22,7 +22,7 @@ if (!$registro) {
     exit;
 }
 
-$gameConfig = game_config_load();
+$gameConfig = game_config_load(); // Ya no necesita argumentos
 $objetoJuego = (string) $gameConfig['objeto'];
 
 $objetoTexto = trim($objetoJuego) !== '' ? $objetoJuego : game_config_defaults()['objeto'];

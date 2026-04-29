@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/init.php';
 
-$gameConfig = game_config_load();
+$gameConfig = game_config_load(); // Ya no necesita argumentos
 $objetoJuego = trim((string) ($gameConfig['objeto'] ?? ''));
 $fechaCorteJuego = trim((string) ($gameConfig['fecha_corte'] ?? ''));
 

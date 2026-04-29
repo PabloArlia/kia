@@ -6,19 +6,11 @@ if (empty($_SESSION['admin'])) {
     exit;
 }
 
-$configFiles = game_config_list_files();
-$selectedFile = $_GET['file'] ?? ($configFiles[0] ?? null);
-
-$config = game_config_load($selectedFile);
+$config = game_config_load();
 $error = null;
 $success = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $fileToSave = $_POST['config_file'] ?? null;
-    if (!$fileToSave || !in_array($fileToSave, $configFiles, true)) {
-        $error = 'Archivo de configuración no válido o no seleccionado.';
-    }
-
     $pregunta = trim((string) ($_POST['pregunta'] ?? ''));
     $objeto = trim((string) ($_POST['objeto'] ?? ''));
     $fechaCorte = trim((string) ($_POST['fecha_corte'] ?? ''));
@@ -139,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if (!$error && $fileToSave) {
+    if (!$error) {
         $nuevoConfig = [
             'pregunta' => $pregunta,
             'objeto' => $objeto,
@@ -147,8 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'imagen_auto' => $imagenAutoConfig,
             'fecha_corte' => $fechaCorte,
         ];
-
-        if (game_config_save($nuevoConfig, $fileToSave)) {
+        if (game_config_save($nuevoConfig)) {
             $success = 'Configuración guardada correctamente para ' . htmlspecialchars($fileToSave);
             // Recargar la configuración para mostrar los datos guardados
             $config = game_config_load($fileToSave);
@@ -195,28 +186,8 @@ include 'header.php';
         <?php endif; ?>
 
         <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Seleccionar Configuración</h3>
-            </div>
-            <div class="card-body">
-                <form method="get" id="select-config-form">
-                    <div class="mb-3">
-                        <label class="form-label" for="file">Archivo de configuración a editar</label>
-                        <select class="form-select" name="file" id="file" onchange="document.getElementById('select-config-form').submit()">
-                            <?php if (empty($configFiles)): ?>
-                                <option>No se encontraron archivos de configuración</option>
-                            <?php else: ?>
-                                <?php foreach ($configFiles as $file): ?>
-                                    <option value="<?= htmlspecialchars($file) ?>" <?= $file === $selectedFile ? 'selected' : '' ?>><?= htmlspecialchars($file) ?></option>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </select>
-                    </div>
-                </form>
-            </div>
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data"> 
-                    <input type="hidden" name="config_file" value="<?= htmlspecialchars($selectedFile ?? '') ?>">
                     <div class="mb-3">
                         <label class="form-label" for="pregunta">Pregunta</label>
                         <textarea class="form-control" id="pregunta" name="pregunta" rows="3" required><?= htmlspecialchars((string) $config['pregunta'], ENT_QUOTES, 'UTF-8') ?></textarea>
@@ -259,9 +230,7 @@ include 'header.php';
                         <div class="form-hint mt-1">Ruta guardada: <?= htmlspecialchars((string) $config['imagen_auto'], ENT_QUOTES, 'UTF-8') ?></div>
                     </div>
 
-                    <?php if ($selectedFile): ?>
-                        <button type="submit" class="btn btn-primary">Guardar cambios</button>
-                    <?php endif; ?>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
                 </form>
             </div>
         </div>

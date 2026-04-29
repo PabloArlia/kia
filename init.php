@@ -91,90 +91,21 @@ function game_config_defaults(): array
     ];
 }
 
-/**
- * Finds the game configuration file for a given date.
- * Scans the 'data/' directory for files named 'juego-YYYY-MM-DD-YYYY-MM-DD.json'.
- *
- * @param string|null $targetDate The date to check against (YYYY-MM-DD). Defaults to today.
- * @return string|false The full path to the matching config file, or false if none found.
- */
-function game_config_file_path(?string $targetDate = null): string|false
+function game_config_file_path(): string
 {
-    $targetDate = $targetDate ?? date('Y-m-d');
-    $configDir = __DIR__ . '/data/';
-    $files = glob($configDir . 'juego-*-*-*.json'); // Look for files matching the date pattern
-
-    if (empty($files)) {
-        return false;
-    }
-
-    $targetTimestamp = strtotime($targetDate);
-
-    foreach ($files as $file) {
-        $filename = basename($file);
-        // Expected format: juego-YYYY-MM-DD-YYYY-MM-DD.json
-        if (preg_match('/^juego-(\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})\.json$/', $filename, $matches)) {
-            $startDate = $matches[1];
-            $endDate = $matches[2];
-
-            $startTimestamp = strtotime($startDate);
-            $endTimestamp = strtotime($endDate . ' 23:59:59'); // Include the whole end day
-
-            if ($targetTimestamp >= $startTimestamp && $targetTimestamp <= $endTimestamp) {
-                return $file; // Found a matching config file
-            }
-        }
-    }
-
-    return false; // No matching config file for the target date
+    return __DIR__ . '/data/juego-config.json';
 }
 
-/**
- * Lists all game configuration files found in the data/ directory.
- *
- * @return array An array of filenames.
- */
-function game_config_list_files(): array
-{
-    $dataDir = __DIR__ . '/data/';
-    $files = glob($dataDir . '*.json');
-    if (empty($files)) {
-        return [];
-    }
-    return array_map('basename', $files);
-}
-
-function game_config_load(?string $filename = null): array
+function game_config_load(): array
 {
     $defaults = game_config_defaults();
-    $filePathToLoad = null;
+    $filePath = game_config_file_path();
 
-    if ($filename) {
-        // Case 1: A specific filename was requested (e.g., from admin dropdown)
-        $filePathToLoad = __DIR__ . '/data/' . basename($filename);
-    }
-    else {
-        // Case 2: No specific filename, try to find the config for the current date
-        $filePathToLoad = game_config_file_path(date('Y-m-d'));
-
-        // Case 3: If no date-ranged config, fall back to juego-default.json
-        if ($filePathToLoad === false) {
-            $defaultJsonPath = __DIR__ . '/data/juego-default.json';
-            if (is_file($defaultJsonPath)) {
-                $filePathToLoad = $defaultJsonPath;
-            } else {
-                // Case 4: If even juego-default.json is not found, return hardcoded defaults
-                return $defaults;
-            }
-        }
-    }
-
-    // Now attempt to load from the determined filePathToLoad
-    if (!is_file($filePathToLoad)) {
+    if (!is_file($filePath)) {
         return $defaults; // File not found, return defaults
     }
 
-    $raw = @file_get_contents($filePathToLoad);
+    $raw = @file_get_contents($filePath);
     if ($raw === false || trim($raw) === '') {
         return $defaults; // Failed to read or empty file, return defaults
     }
@@ -182,16 +113,6 @@ function game_config_load(?string $filename = null): array
     $decoded = json_decode($raw, true);
     if (!is_array($decoded)) {
         return $defaults; // Invalid JSON, return defaults
-    }
-
-    // Merge with defaults to ensure all keys are present, and override with loaded values
-    return array_merge($defaults, $decoded);
-        return $defaults;
-    }
-
-    $raw = @file_get_contents($filePath);
-    if ($raw === false || trim($raw) === '') {
-        return $defaults;
     }
 
     $decoded = json_decode($raw, true);
@@ -214,19 +135,26 @@ function game_config_load(?string $filename = null): array
     ];
 }
 
-function game_config_save(array $config, string $filename): bool
+function game_config_save(array $config): bool
 {
     $defaults = game_config_defaults();
+    $current = game_config_load();
+
+    $pregunta = isset($config['pregunta']) ? trim((string) $config['pregunta']) : $current['pregunta'];
+    $objeto = isset($config['objeto']) ? trim((string) $config['objeto']) : $current['objeto'];
+    $imagen = isset($config['imagen']) ? trim((string) $config['imagen']) : $current['imagen'];
+    $imagenAuto = isset($config['imagen_auto']) ? trim((string) $config['imagen_auto']) : $current['imagen_auto'];
+    $fechaCorte = isset($config['fecha_corte']) ? trim((string) $config['fecha_corte']) : $current['fecha_corte'];
 
     $payload = [
-        'pregunta' => $config['pregunta'] ?? $defaults['pregunta'],
-        'objeto' => $config['objeto'] ?? $defaults['objeto'],
-        'imagen' => $config['imagen'] ?? $defaults['imagen'],
-        'imagen_auto' => $config['imagen_auto'] ?? $defaults['imagen_auto'],
-        'fecha_corte' => $config['fecha_corte'] ?? $defaults['fecha_corte'],
+        'pregunta' => $pregunta !== '' ? $pregunta : $defaults['pregunta'],
+        'objeto' => $objeto !== '' ? $objeto : $defaults['objeto'],
+        'imagen' => $imagen !== '' ? $imagen : $defaults['imagen'],
+        'imagen_auto' => $imagenAuto !== '' ? $imagenAuto : $defaults['imagen_auto'],
+        'fecha_corte' => $fechaCorte !== '' ? $fechaCorte : $defaults['fecha_corte'],
     ];
 
-    $filePath = __DIR__ . '/data/' . basename($filename);
+    $filePath = game_config_file_path();
     $dir = dirname($filePath);
     if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
         return false;
