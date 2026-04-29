@@ -93,7 +93,32 @@ function game_config_defaults(): array
 
 function game_config_file_path(): string
 {
-    return __DIR__ . '/data/juego-config.json';
+    $targetDate = date('Y-m-d');
+    $configDir = __DIR__ . '/data/';
+    $files = glob($configDir . 'juego-*-*-*.json');
+
+    if ($files) {
+        $targetTimestamp = strtotime($targetDate);
+
+        foreach ($files as $file) {
+            $filename = basename($file);
+            // Busca archivos con el formato: juego-YYYY-MM-DD-YYYY-MM-DD.json
+            if (preg_match('/^juego-(\d{4}-\d{2}-\d{2})-(\d{4}-\d{2}-\d{2})\.json$/', $filename, $matches)) {
+                $startDate = $matches[1];
+                $endDate = $matches[2];
+
+                $startTimestamp = strtotime($startDate);
+                $endTimestamp = strtotime($endDate . ' 23:59:59'); // Incluye el día de finalización completo
+
+                if ($targetTimestamp >= $startTimestamp && $targetTimestamp <= $endTimestamp) {
+                    return $file; // Se encontró un archivo para la fecha actual
+                }
+            }
+        }
+    }
+
+    // Si no se encuentra un archivo por fecha, se usa el archivo por defecto.
+    return __DIR__ . '/data/juego-default.json';
 }
 
 function game_config_load(): array
