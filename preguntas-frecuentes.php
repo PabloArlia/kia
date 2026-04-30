@@ -6,6 +6,10 @@ $objetoJuego = trim((string) ($gameConfig['objeto'] ?? ''));
 if ($objetoJuego === '') {
     $objetoJuego = game_config_defaults()['objeto'];
 }
+if ($periodo === '') {
+    $periodo = game_config_defaults()['periodo'];
+}
+
 
 $pageTitle = 'Preguntas Frecuentes - ' . APP_NAME;
 require_once __DIR__ . '/includes/header.php';
@@ -16,7 +20,7 @@ require_once __DIR__ . '/includes/header.php';
 
 	<li>
 		<h3>¿Hasta cuándo puedo participar en la promoción?</h3>
-		<p>El periodo de participación de la mecánica de la promoción inicia a las 00:00:01 hrs del día 21 de abril de 2026 y concluye a las 23:59:59 hrs del día 30 de abril de 2026.</p>
+		<p>El periodo de participación de la mecánica de la promoción <?= htmlspecialchars($periodo) ?></p>
 	</li>
 
 	<li>

@@ -70,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pregunta = trim((string) ($_POST['pregunta'] ?? ''));
     $objeto = trim((string) ($_POST['objeto'] ?? ''));
     $fechaCorte = trim((string) ($_POST['fecha_corte'] ?? ''));
+    $periodo = trim((string) ($_POST['periodo'] ?? ''));
     $imagenConfig = $config['imagen'];
     $imagenAutoConfig = $config['imagen_auto'];
 
@@ -79,6 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'El objeto es obligatorio.';
     } elseif ($fechaCorte === '') {
         $error = 'La fecha de corte es obligatoria.';
+    } elseif ($periodo === '') {
+        $error = 'El periodo es obligatorio.';
     }
 
     if (!$error && isset($_FILES['imagen']) && is_array($_FILES['imagen']) && (int) ($_FILES['imagen']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
@@ -194,6 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'imagen' => $imagenConfig,
             'imagen_auto' => $imagenAutoConfig,
             'fecha_corte' => $fechaCorte,
+            'periodo' => $periodo,
         ];
 
         // --- Lógica para guardar el archivo de configuración ---
@@ -216,6 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $config['pregunta'] = $pregunta;
         $config['objeto'] = $objeto;
         $config['fecha_corte'] = $fechaCorte;
+        $config['periodo'] = $periodo;
         // Mantener las imágenes aunque haya otro error
         $config['imagen'] = $imagenConfig;
         $config['imagen_auto'] = $imagenAutoConfig;
@@ -285,6 +290,12 @@ include 'header.php';
                         <label class="form-label" for="fecha_corte">Fecha de corte</label>
                         <input class="form-control" type="text" id="fecha_corte" name="fecha_corte" value="<?= htmlspecialchars((string) ($config['fecha_corte'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
                         <small class="form-hint">Ejemplo: 04 de mayo de 2026.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="periodo">Periodo</label>
+                        <input class="form-control" type="text" id="periodo" name="periodo" value="<?= htmlspecialchars((string) ($config['periodo'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required>
+                        <small class="form-hint">Ejemplo: del 21 de abril al 30 de abril de 2026.</small>
                     </div>
 
                     <div class="mb-3">

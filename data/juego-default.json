@@ -3,5 +3,6 @@
     "objeto": "balones",
     "imagen": "img/juego/pregunta_20260430_175342_b523ad4e.png",
     "imagen_auto": "img/auto_20260421_060943_304e756b.png",
-    "fecha_corte": "Corte"
+    "fecha_corte": "Corte",
+    "periodo": "Periodo de participación no definido."
 }
