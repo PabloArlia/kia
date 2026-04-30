@@ -45,7 +45,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Verificar duplicados de correo/teléfono ANTES de validar otros campos
     if (!isset($errors['correo'])) {
         try {
-            $stmt = db()->prepare('SELECT id, nombre, correo, telefono, fecha_nacimiento, estado, concesionaria, kia_fidelity, modelo, vin FROM registros WHERE correo = :correo OR telefono = :telefono LIMIT 1');
+            $stmt = db()->prepare('
+                SELECT id, nombre, correo, telefono, fecha_nacimiento, estado, concesionaria, kia_fidelity, modelo, vin 
+                FROM registros 
+                WHERE (correo = :correo OR telefono = :telefono) 
+                AND YEAR(created_at) = YEAR(CURRENT_DATE())
+                AND MONTH(created_at) = MONTH(CURRENT_DATE())
+                LIMIT 1');
             $stmt->execute([
                 ':correo' => $values['correo'],
                 ':telefono' => $values['telefono'],
@@ -68,10 +74,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     header('Location: registro-paso2.php');
                     exit;
-                }
-
-                if (isset($duplicado['telefono']) && $duplicado['telefono'] === $values['telefono']) {
-                    $errors['telefono'] = 'Este telefono ya fue registrado.';
                 }
             }
         } catch (Throwable $e) {
