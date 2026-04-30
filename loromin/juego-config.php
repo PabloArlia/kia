@@ -6,9 +6,65 @@ if (empty($_SESSION['admin'])) {
     exit;
 }
 
-$config = game_config_load();
+$configDir = dirname(__DIR__) . '/data/';
+$defaults = game_config_defaults();
 $error = null;
 $success = null;
+
+// --- Lógica para listar y cargar archivos de configuración ---
+
+// Obtener todos los archivos .json de la carpeta /data/
+$jsonFiles = glob($configDir . '*.json');
+$availableFiles = [];
+foreach ($jsonFiles as $file) {
+    $availableFiles[] = basename($file);
+}
+
+// Ordenar los archivos por fecha ascendente.
+usort($availableFiles, function ($a, $b) {
+    preg_match('/(\d{2}-\d{2}-\d{4})/', $a, $matchesA);
+    preg_match('/(\d{2}-\d{2}-\d{4})/', $b, $matchesB);
+
+    $dateA = $matchesA[1] ?? null;
+    $dateB = $matchesB[1] ?? null;
+
+    // default primero
+    if (!$dateA) return -1;
+    if (!$dateB) return 1;
+
+    $timestampA = DateTime::createFromFormat('d-m-Y', $dateA)->getTimestamp();
+    $timestampB = DateTime::createFromFormat('d-m-Y', $dateB)->getTimestamp();
+
+    return $timestampA <=> $timestampB;
+});
+
+// Get the selected file from GET parameter, or null if not set
+$selectedFile = $_GET['file'] ?? null;
+$config = [];
+
+if ($selectedFile && in_array($selectedFile, $availableFiles, true)) {
+    $filePath = $configDir . basename($selectedFile);
+    $raw = @file_get_contents($filePath);
+    if ($raw !== false) {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            $config = array_merge($defaults, $decoded);
+        } else {
+            $error = "El archivo " . htmlspecialchars($selectedFile) . " contiene JSON inválido.";
+            $config = $defaults;
+        }
+    } else {
+        $error = "No se pudo leer el archivo " . htmlspecialchars($selectedFile) . ".";
+        $config = $defaults;
+    }
+} else {
+    // Si no hay archivo seleccionado o no es válido, cargamos el que corresponde por fecha o el default.
+    // Esta es la única función que necesitamos de init.php para saber cuál es el activo.
+    $config = game_config_load();
+    $selectedFile = basename(game_config_file_path());
+}
+
+// --- Fin de la lógica de carga ---
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pregunta = trim((string) ($_POST['pregunta'] ?? ''));
@@ -139,13 +195,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'imagen_auto' => $imagenAutoConfig,
             'fecha_corte' => $fechaCorte,
         ];
-        if (game_config_save($nuevoConfig)) {
-            $success = 'Configuración guardada correctamente para ' . htmlspecialchars($fileToSave);
-            // Recargar la configuración para mostrar los datos guardados
-            $config = game_config_load($fileToSave);
-            $selectedFile = $fileToSave;
+
+        // --- Lógica para guardar el archivo de configuración ---
+        $fileToSave = $_POST['selected_file'] ?? null;
+        if ($fileToSave && in_array($fileToSave, $availableFiles, true)) {
+            $savePath = $configDir . basename($fileToSave);
+            $json = json_encode($nuevoConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            if ($json !== false && @file_put_contents($savePath, $json) !== false) {
+                $success = 'Configuración guardada correctamente para ' . htmlspecialchars($fileToSave);
+                $config = array_merge($defaults, $nuevoConfig); // Recargar datos en la vista
+            } else {
+                $error = 'No se pudo guardar la configuración en el archivo ' . htmlspecialchars($fileToSave) . '.';
+            }
+        // --- Fin de la lógica de guardado ---
         } else {
-            $error = 'No se pudo guardar la configuración JSON.';
+            $error = 'Archivo de configuración no válido para guardar.';
         }
     } else {
         $config['pregunta'] = $pregunta;
@@ -165,6 +230,21 @@ include 'header.php';
         <div class="row g-2 align-items-center">
             <div class="col">
                 <h2 class="page-title">Configuración del juego</h2>
+                <div class="mb-3">
+                    <label class="form-label" for="config_file_selector">Seleccionar archivo de configuración</label>
+                    <select class="form-select" id="config_file_selector" onchange="if(this.value) window.location.href = 'juego-config.php?file=' + this.value;">
+                        <?php foreach ($availableFiles as $file): ?>
+                            <option value="<?= htmlspecialchars($file, ENT_QUOTES, 'UTF-8') ?>"
+                                <?= ($selectedFile === $file) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($file, ENT_QUOTES, 'UTF-8') ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="form-hint">
+                        El archivo actualmente cargado es: <strong><?= htmlspecialchars($selectedFile, ENT_QUOTES, 'UTF-8') ?></strong>.
+                        Si no se selecciona uno, se carga el archivo por fecha o el por defecto.
+                    </small>
+                </div>
                 <div class="text-muted">Administra pregunta, objeto, imagenes e imagen del auto sin usar base de datos.</div>
             </div>
         </div>
@@ -187,7 +267,8 @@ include 'header.php';
 
         <div class="card">
             <div class="card-body">
-                <form method="post" enctype="multipart/form-data"> 
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="selected_file" value="<?= htmlspecialchars($selectedFile, ENT_QUOTES, 'UTF-8') ?>">
                     <div class="mb-3">
                         <label class="form-label" for="pregunta">Pregunta</label>
                         <textarea class="form-control" id="pregunta" name="pregunta" rows="3" required><?= htmlspecialchars((string) $config['pregunta'], ENT_QUOTES, 'UTF-8') ?></textarea>
